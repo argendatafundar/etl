@@ -17,7 +17,7 @@ next_update <- function(n_months){
   
 }
 
-periodicidad <- 4
+periodicidad <- 12
 fecha_actualizar <- next_update(n_months = periodicidad)
 
 url <- "https://data.worldbank.org/indicator/NY.GDP.PCAP.PP.KD"

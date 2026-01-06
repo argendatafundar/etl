@@ -113,16 +113,9 @@ armador_descripcion <- function(metadatos, etiquetas_nuevas = data.frame(), outp
 }
 
 # Tomo las variables output_name y subtopico declaradas arriba
-metadatos <- data.frame(
-  variable_nombre = c("anio",
-                      "fuente",
-                      "valor",
-                      "pais_nombre"),
-  descripcion = c("Año de referencia",
-                  "Fuente utilizada para el cálculo",
-                  "Variación interanual del PIB per cápita (en dólares constantes), en porcentaje",
-                  "País de referencia")
-)
+metadatos <- argendataR::metadata(subtopico = subtopico) %>% 
+  dplyr::filter(grepl(paste0("^", output_name), nombre_archivo)) %>% 
+  distinct(variable_nombre, descripcion) 
 
 
 
