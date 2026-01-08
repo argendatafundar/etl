@@ -4,32 +4,85 @@ gc()   #Garbage Collection
 
 # Metadatos 
 subtopico <- "SCROLL"
-output_name <- "expectativa_vida_al_nacer_ultimo_anio.csv"
+output_name <- "indice_democracia_liberal_ultimo_anio.csv"
 analista <- "Daniel Schteingart"
-fuente1 <- 'R433C279' # World Population Proscpects - Demographic Indicators. 1950-2100, medium. CSV format
+fuente1 <- 'R495C0' # Varieties of Democracy (V-Dem) - Index of Liberal Democracy
+fuente2 <- 'R46C0' # World Bank - Population, total
 
-df_wpp <- argendataR::get_clean_path(fuente1) %>% 
-  arrow::read_parquet(.)
+ex <- new.env()
+argendataR::get_raw_path(fuente1) %>% 
+  load(., envir = ex)
 
-geo_front <- argendataR::get_nomenclador_geografico_front() %>% 
-  select(geocodigoFundar = geocodigo, geonombreFundar = name_long)
+df_vdem <- ex$vdem %>% 
+  select(geocodigoFundar = country_text_id, anio = year, libdem_index = v2x_libdem) 
 
-df_output <- df_wpp %>% 
-  dplyr::filter((trimws(iso3_code) != '') | (loc_id %in% c(904, 900, 1503)),
-                !is.na(iso3_code),
-                time == (year(Sys.Date())-1))  %>% 
-  mutate(geocodigoFundar = case_when(
-    loc_id == 904 ~ 'LCN',
-    loc_id == 900 ~ 'WLD',
-    loc_id == 1503 ~ 'HIC',
-    TRUE ~ iso3_code
-  )) %>% 
-  left_join(geo_front, join_by(geocodigoFundar)) %>% 
-  select(anio = time, geocodigoFundar, geonombreFundar, exp_vida_al_nacer = l_ex) 
+df_population <- argendataR::get_raw_path(fuente2) %>% 
+  read.csv(.) 
+
+geonomenclador <- argendataR::get_nomenclador_geografico() %>% 
+  select(geocodigoFundar = codigo_fundar, geonombreFundar = desc_fundar, subregion_unsd)
+
+df_paises <- df_vdem %>%  
+  dplyr::filter(anio == max(anio)) %>% 
+  left_join(geonomenclador, join_by(geocodigoFundar)) %>% 
+  select(anio, geocodigoFundar, geonombreFundar, libdem_index) %>%
+  drop_na(libdem_index, geonombreFundar)
+
+
+df_latam <- df_paises %>% 
+  inner_join(geonomenclador %>% 
+              dplyr::filter(subregion_unsd == "América Latina y el Caribe"), join_by(geocodigoFundar)) %>%
+  inner_join(df_population %>% 
+        select( anio = year, geocodigoFundar = iso3c, population = `SP.POP.TOTL`),
+         join_by(anio, geocodigoFundar)) %>% 
+  mutate(geocodigoFundar = "LCN", geonombreFundar = "América Latina y el Caribe") %>%
+  group_by(anio, geocodigoFundar, geonombreFundar) %>%
+  summarise(libdem_index = stats::weighted.mean(libdem_index, population, na.rm = TRUE)) %>% 
+  ungroup() %>%
+  select(anio, geocodigoFundar, geonombreFundar, libdem_index)
+
+
+df_world <- df_paises %>% 
+  inner_join(df_population %>% 
+        select( anio = year, geocodigoFundar = iso3c, population = `SP.POP.TOTL`),
+         join_by(anio, geocodigoFundar)) %>% 
+  group_by(anio) %>%
+  summarise(libdem_index = stats::weighted.mean(libdem_index, population, na.rm = TRUE)) %>% 
+  ungroup() %>%
+  mutate(geocodigoFundar = "WLD", geonombreFundar = "Mundo") %>%
+  select(anio, geocodigoFundar, geonombreFundar, libdem_index)
+
+
+paises_hic <- c(
+  "ABW", "AND", "ARE", "ASM", "ATG", "AUS", "AUT", "BEL",
+  "BHR", "BHS", "BMU", "BRB", "BRN", "CAN", "CHE", "CHI",
+  "CHL", "CUW", "CYM", "CYP", "CZE", "DEU", "DNK", "ESP",
+  "EST", "FIN", "FRA", "FRO", "GBR", "GIB", "GRC", "GRL",
+  "GUM", "GUY", "HKG", "HRV", "HUN", "IMN", "IRL", "ISL",
+  "ISR", "ITA", "JPN", "KNA", "KOR", "KWT", "LIE", "LTU",
+  "LUX", "LVA", "MAC", "MAF", "MCO", "MLT", "MNP", "NCL",
+  "NLD", "NOR", "NRU", "NZL", "OMN", "PAN", "POL", "PRI",
+  "PRT", "PYF", "QAT", "ROU", "SAU", "SGP", "SMR", "SVK",
+  "SVN", "SWE", "SXM", "SYC", "TCA", "TTO", "URY", "USA",
+  "VGB", "VIR"
+)
+
+df_hic <- df_paises %>% 
+  dplyr::filter(geocodigoFundar %in% paises_hic) %>% 
+  inner_join(df_population %>% 
+        select( anio = year, geocodigoFundar = iso3c, population = `SP.POP.TOTL`),
+         join_by(anio, geocodigoFundar)) %>% 
+  mutate(geocodigoFundar = "HIC", geonombreFundar = "Países de altos ingresos") %>%
+  group_by(anio, geocodigoFundar, geonombreFundar) %>%
+  summarise(libdem_index = stats::weighted.mean(libdem_index, population, na.rm = TRUE)) %>% 
+  ungroup() %>%
+  select(anio, geocodigoFundar, geonombreFundar, libdem_index)
+
+df_output <- bind_rows(df_latam, df_world, df_hic, df_paises)
 
 # Preparar datos para el gráfico
 df_plot <- df_output %>%
-    arrange(exp_vida_al_nacer) %>%
+    arrange(libdem_index) %>%
     mutate(
         orden = row_number(),
         geonombreFundar = factor(geonombreFundar, levels = unique(geonombreFundar)),
@@ -64,30 +117,30 @@ colores["Promedio mundial"] <- "#1576a9"
 # Obtener valores de referencia
 valores_referencia <- df_output %>%
     dplyr::filter(geocodigoFundar %in% c("LCN", "WLD", "HIC", "ARG")) %>%
-    select(geocodigoFundar, exp_vida_al_nacer)
+    select(geocodigoFundar, libdem_index)
 
-valor_lcn <- valores_referencia %>% filter(geocodigoFundar == "LCN") %>% pull(exp_vida_al_nacer)
-valor_wld <- valores_referencia %>% filter(geocodigoFundar == "WLD") %>% pull(exp_vida_al_nacer)
-valor_hic <- valores_referencia %>% filter(geocodigoFundar == "HIC") %>% pull(exp_vida_al_nacer)
-valor_arg <- valores_referencia %>% filter(geocodigoFundar == "ARG") %>% pull(exp_vida_al_nacer)
+valor_lcn <- valores_referencia %>% filter(geocodigoFundar == "LCN") %>% pull(libdem_index)
+valor_wld <- valores_referencia %>% filter(geocodigoFundar == "WLD") %>% pull(libdem_index)
+valor_hic <- valores_referencia %>% filter(geocodigoFundar == "HIC") %>% pull(libdem_index)
+valor_arg <- valores_referencia %>% filter(geocodigoFundar == "ARG") %>% pull(libdem_index)
 
 # Encontrar posiciones de las líneas de referencia
-pos_lcn <- which(df_plot$exp_vida_al_nacer >= valor_lcn)[1]
-pos_wld <- which(df_plot$exp_vida_al_nacer >= valor_wld)[1]
-pos_arg <- which(df_plot$exp_vida_al_nacer >= valor_arg)[1]
-pos_hic <- which(df_plot$exp_vida_al_nacer >= valor_hic)[1]
+pos_lcn <- which(df_plot$libdem_index >= valor_lcn)[1]
+pos_wld <- which(df_plot$libdem_index >= valor_wld)[1]
+pos_arg <- which(df_plot$libdem_index >= valor_arg)[1]
+pos_hic <- which(df_plot$libdem_index >= valor_hic)[1]
 
 # Obtener el año del gráfico
 anio_grafico <- unique(df_output$anio)[1]
 
 # Calcular posición Y para las etiquetas (usar valor máximo en escala log)
-y_max_log <- max(df_plot$exp_vida_al_nacer) * 1.5
+y_max_log <- max(df_plot$libdem_index) * 1.5
 
 # Crear el gráfico
-p <- ggplot(df_plot, aes(x = orden, y = exp_vida_al_nacer)) +
+p <- ggplot(df_plot, aes(x = orden, y = libdem_index)) +
     # Barras
     geom_col(aes(fill = etiqueta_barra), width = 0.8) + 
-    # coord_cartesian(ylim = c(400, max(df_plot$exp_vida_al_nacer) * 1.8)) +
+    # coord_cartesian(ylim = c(400, max(df_plot$anios_educacion_promedio) * 1.8)) +
     scale_fill_manual(values = colores, guide = "none") +
     # Caja de Argentina
     annotate("rect", xmin = pos_arg - (nchar("ARGENTINA") / 2) - 4, xmax = pos_arg + (nchar("ARGENTINA") / 2) + 4, 
@@ -113,17 +166,17 @@ p <- ggplot(df_plot, aes(x = orden, y = exp_vida_al_nacer)) +
              color = "#003c6e", angle = 90, hjust = 0, vjust = 0.5, size = 2,
              fontface = "bold") +
     geom_text(data = df_plot %>% filter(orden == 1), 
-              aes(x = orden , y = exp_vida_al_nacer * 1.1, label = geonombreFundar), 
+              aes(x = orden , y = libdem_index * 1.1, label = geonombreFundar), 
               hjust = 1.1, vjust = 0.5, color = "black", size = 2, fontface = "bold") +
     geom_text(data = df_plot %>% filter(orden == n()), 
-              aes(x = orden + 1, y = exp_vida_al_nacer * 1.1, label = geonombreFundar), 
+              aes(x = orden + 1, y = libdem_index * 1.1, label = geonombreFundar), 
               hjust = -0.1, vjust = 0.5, color = "black", size = 2, fontface = "bold") +
     # Título y caption
     labs(
-        title = paste0("Expectativa de vida al nacer, ", anio_grafico),
+        title = paste0("Índice de democracia liberal, ", anio_grafico),
         x = "",
-        y = "Expectativa de vida al nacer",
-        caption = "Fuente de datos: Naciones Unidas, World Population Prospects (2024)"
+        y = "",
+        caption = "Fuente de datos: Varieties of Democracy (V-Dem, 2025)"
     ) +
     theme_minimal() +
     theme(
@@ -148,9 +201,11 @@ filename <- paste0(gsub("\\.csv", "", output_name), ".svg")
 name_file <- file.path(graficos_path, filename)
 ggsave(filename = name_file, plot = p, device = "svg", width = 8, height = 5)
 
+
+
 df_anterior <- df_output
 
-pks <- c('anio', 'geocodigoFundar')
+pks <- c('anio', 'geocodigoFundar', 'geonombreFundar')
 
 comparacion <- argendataR::comparar_outputs(
   df = df_output,
@@ -221,12 +276,11 @@ df_output %>%
     analista = analista,
     pk = pks,
     descripcion_columnas = descripcion, 
-    unidades = list("exp_vida_al_nacer" = "años"))
+    unidades = list("libdem_index" = "indice"))
 
 
 
 output_name <- gsub("\\.csv", "", output_name)
 mandar_data(paste0(output_name, ".csv"), subtopico = subtopico, branch = "main")
 mandar_data(paste0(output_name, ".json"), subtopico = subtopico,  branch = "main")
-
 

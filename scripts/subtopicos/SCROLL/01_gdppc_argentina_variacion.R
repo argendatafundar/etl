@@ -41,31 +41,36 @@ df_output <- df_stage %>%
   dplyr::filter(anio >= 1900, !(fuente == "MDP" & anio >= 2022), !(fuente == "WB" & anio < 2022))
 
 
-# p <- ggplot(df_output, aes(x = anio, y = valor)) +
-#   geom_hline(yintercept = 0, color = "white", linewidth = 1) +
-#   geom_line(color = "#0470a9", linewidth = 0.8) +
-#   labs(title = "Variación interanual del PIB per cápita en Argentina, 1900-2023",
-#        x = "", y = "",
-#        caption = "Fuente de datos: Maddison Project Database (2023) y Banco Mundial") +
-#   scale_x_continuous(breaks = seq(1900, 2024, 4)) +
-#   scale_y_continuous(breaks = seq(-20, 20, 5), labels = function(x) paste0(x, "%")) +
-#   theme_minimal() +
-#   theme(
-#     plot.background = element_rect(fill = "#000d37", color = NA),
-#     panel.background = element_rect(fill = "#000d37", color = NA),
-#     plot.title = element_text(color = "white", size = 12, face = "bold", hjust = 0),
-#     plot.caption = element_text(color = "white", size = 9),
-#     axis.text = element_text(color = "#6490a5", size = 10),
-#     axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
-#     axis.ticks = element_line(color = "white"),
-#     axis.ticks.x = element_blank(),
-#     panel.grid.major.x = element_blank(),
-#     panel.grid.minor.x = element_blank(),
-#     panel.grid.major.y = element_line(color = scales::alpha("white", 0.3), linewidth = 0.3),
-#     panel.grid.minor.y = element_blank()
-#   )
+p <- ggplot(df_output, aes(x = anio, y = valor)) +
+  geom_hline(yintercept = 0, color = "white", linewidth = 1) +
+  geom_line(color = "#0470a9", linewidth = 0.8) +
+  labs(title = "Variación interanual del PIB per cápita en Argentina, 1900-2023",
+       x = "", y = "",
+       caption = "Fuente de datos: Maddison Project Database (2023) y Banco Mundial") +
+  scale_x_continuous(breaks = seq(1900, 2024, 4)) +
+  scale_y_continuous(breaks = seq(-20, 20, 5), labels = function(x) paste0(x, "%")) +
+  theme_minimal() +
+  theme(
+    plot.background = element_rect(fill = "#000d37", color = NA),
+    panel.background = element_rect(fill = "#000d37", color = NA),
+    plot.title = element_text(color = "white", size = 12, face = "bold", hjust = 0),
+    plot.caption = element_text(color = "white", size = 9),
+    axis.text = element_text(color = "#6490a5", size = 10),
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+    axis.ticks = element_line(color = "white"),
+    axis.ticks.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    panel.grid.major.y = element_line(color = scales::alpha("white", 0.3), linewidth = 0.3),
+    panel.grid.minor.y = element_blank()
+  )
 
-# print(p)
+# Exporta el gráfico como SVG en la carpeta 'graficos' 
+graficos_path <- "./scripts/subtopicos/SCROLL/graficos"
+filename <- paste0(gsub("\\.csv", "", output_name), ".svg")
+name_file <- file.path(graficos_path, filename)
+ggsave(filename = name_file, plot = p, device = "svg", width = 8, height = 5)
+
 
 df_anterior <- df_output
 
