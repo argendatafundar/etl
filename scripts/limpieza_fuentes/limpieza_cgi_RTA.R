@@ -2,14 +2,13 @@
 rm( list=ls() )  #Borro todos los objetos
 gc()   #Garbage Collection
 
-limpiar_temps()
 
 
 id_fuente <- 35
-fuente_raw1 <- sprintf("R%sC0",id_fuente)
+fuente_raw <- sprintf("R%sC0",id_fuente)
 
 nombre_archivo_raw <- str_split_1(fuentes_raw() %>% 
-                                    filter(codigo == fuente_raw1) %>% 
+                                    filter(codigo == fuente_raw) %>% 
                                     select(path_raw) %>% 
                                     pull(), pattern = "\\.")[1]
 
@@ -19,7 +18,7 @@ descargar_fuente_raw(id_fuente = id_fuente, tempdir())
 # Lectura datos 
 
 SHEET_NAME <- "RTA"
-serie_cgi <- readxl::read_excel(get_temp_path(fuente_raw1), sheet = SHEET_NAME)
+serie_cgi <- readxl::read_excel(get_raw_path(fuente_raw), sheet = SHEET_NAME)
 
 
 # pivoteo la tabla a long

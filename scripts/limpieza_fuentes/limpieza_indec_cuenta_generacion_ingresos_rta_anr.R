@@ -2,28 +2,27 @@
 rm( list=ls() )  #Borro todos los objetos
 gc()   #Garbage Collection
 
+
 code_path <- this.path::this.path()
 code_name <- code_path %>% str_split_1(., pattern = "/") %>% tail(., 1)
 
-id_fuente <- 127
+id_fuente <- 228
 fuente_raw <- sprintf("R%sC0",id_fuente)
 
-df_raw <- argendataR::get_raw_path(fuente_raw) %>% readr::read_csv(., locale = locale(encoding = "latin1"))
+
+source("scripts/utils/funciones_limpieza_cgi_serie_sexo_edad.R")
 
 
-df_clean <- df_raw %>%
-  janitor::clean_names() %>% 
-  mutate(descripcion = ifelse(is.na(descripcion), codigo, descripcion)) %>% 
-  mutate(descripcion = case_when(
-    descripcion == "B" ~ "Bienes",
-    descripcion == "S" ~ "Servicios",
-    T ~ descripcion
-  )) %>% 
-  mutate(descripcion = str_to_sentence(descripcion)) %>% 
-  mutate(anio =  as.numeric(substr(periodo, 1, 4)),
-         mes = as.numeric(substr(periodo, 5, 6))) %>% 
-  select(-c(periodo)) %>%
-  select(anio, mes, region, codigo, clasificador, descripcion,  everything())
+sheet_name <- "RTA_ANR"
+
+all_data <- readxl::read_excel(get_raw_path(fuente_raw),
+                               sheet = sheet_name,
+                               col_names = F,
+                               na = c("","-"," - ","///"))
+
+df_clean <- clean_cgi(all_data = all_data, sheet_name = sheet_name)
+
+
 
 # Guardado de archivo
 nombre_archivo_raw <- str_split_1(fuentes_raw() %>% 
@@ -31,17 +30,21 @@ nombre_archivo_raw <- str_split_1(fuentes_raw() %>%
                                     select(path_raw) %>% 
                                     pull(), pattern = "\\.")[1]
 
-clean_filename <- glue::glue("{nombre_archivo_raw}_CLEAN.parquet")
+normalized_sheet_name <- sheet_name %>% janitor::make_clean_names(.)
+
+clean_filename <- glue::glue("{nombre_archivo_raw}_{normalized_sheet_name}_CLEAN.parquet")
 
 path_clean <- glue::glue("{tempdir()}/{clean_filename}")
 
 df_clean %>% arrow::write_parquet(., sink = path_clean)
 
+
+
 titulo.raw <- fuentes_raw() %>% 
   filter(codigo == fuente_raw) %>% 
   select(nombre) %>% pull()
 
-clean_title <- glue::glue("{titulo.raw} - Limpio")
+clean_title <- glue::glue("{titulo.raw} - {sheet_name}")
 
 # agregar_fuente_clean(id_fuente_raw = id_fuente,
 #                      df = df_clean,
@@ -49,7 +52,7 @@ clean_title <- glue::glue("{titulo.raw} - Limpio")
 #                      nombre = clean_title,
 #                      script = code_name)
 
-id_fuente_clean <- 54
+id_fuente_clean <- 320
 codigo_fuente_clean <- sprintf("R%sC%s", id_fuente, id_fuente_clean)
 
 
@@ -57,7 +60,7 @@ df_clean_anterior <- arrow::read_parquet(argendataR::get_clean_path(codigo = cod
 
 comparacion <- comparar_fuente_clean(df_clean,
                                      df_clean_anterior,
-                                     pk = c("anio", "mes", "region", "codigo")
+                                     pk = c('letra', 'edad_sexo', 'anio')
 )
 
 actualizar_fuente_clean(id_fuente_clean = id_fuente_clean,
