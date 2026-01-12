@@ -16,4 +16,4 @@ fuentes_TEST.R
 tmp
 bitacora.md
 buscar_cleans_example.R
-.vscode
+.vscode/*
