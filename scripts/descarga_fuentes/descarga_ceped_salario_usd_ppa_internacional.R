@@ -15,7 +15,7 @@ options(download.file.method="curl", download.file.extra="-k -L")
 path_raw <- "ceped_salario_usd_ppa_internacional.xlsx"
 
 # Es necesario buscar la URL haciendo la consulta con el browser o hacerlo dinámicamente con Selenium
-temp_url <- "https://ceped-data.shinyapps.io/ceped-data/_w_4bbe6c53/session/f818a10d5210512c90175f00b655b4da/download/salarios-download_database?w=4bbe6c53"
+temp_url <- "https://ceped-data.shinyapps.io/ceped-data/_w_b9f27b87bf374662b8a839d5f39b0832/session/e98a6ea3f627ff530c71656b44433e99/download/salarios-download_database?w=b9f27b87bf374662b8a839d5f39b0832"
 
 destfile <- glue::glue("{tempdir()}/{path_raw}")
 

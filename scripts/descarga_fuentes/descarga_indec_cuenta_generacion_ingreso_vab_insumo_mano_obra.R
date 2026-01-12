@@ -17,10 +17,13 @@ serie_cgi_id <- 49
 pattern_vab <- ".*serie_cgi.*\\.xls"
 
 
-url <- INDEC.cuentas_nacionales.extraer_links(id = serie_cgi_id, pattern = pattern_vab)
+result <- INDEC.cuentas_nacionales.extraer_links(id = serie_cgi_id, pattern = pattern_vab)
 
+url <- result$url
 
-download_filename <- "serie_cgi.xls"
+title_raw <- glue::glue("Cuentas Nacionales. Cuenta de Generación del Ingreso. {result$text}")
+
+download_filename <- basename(url)
 
 download.file(url,
               mode = "wb", # archivos tipo xlsx requieren escritura tipo binaria
@@ -35,6 +38,7 @@ download.file(url,
 #                 )
 
 actualizar_fuente_raw(id_fuente = 35, 
+                      nombre = title_raw,
                       path_raw = download_filename, 
                       url = url, 
                       fecha_actualizar = fecha_actualizar,
