@@ -15,3 +15,5 @@ fuentes_TEST.R
 *.txt
 tmp
 bitacora.md
+buscar_cleans_example.R
+.vscode
