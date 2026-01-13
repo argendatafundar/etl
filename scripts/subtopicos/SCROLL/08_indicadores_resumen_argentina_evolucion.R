@@ -164,7 +164,15 @@ df_vdem_women_empowerment_arg <- df_vdem_women_empowerment %>%
   arrange(anio)
 
 
-df_output <- bind_rows(df_literacy_rate, df_child_mortality_arg, df_le_arg, df_mys_arg, df_vdem_libdem_arg, df_vdem_women_empowerment_arg)
+df_output <- bind_rows(
+  df_literacy_rate, 
+  df_child_mortality_arg, 
+  df_le_arg, 
+  df_mys_arg, 
+  df_vdem_libdem_arg, 
+  df_vdem_women_empowerment_arg
+  ) %>% 
+  drop_na(valor)
 
 
 # Crear el gráfico
@@ -201,7 +209,7 @@ ggsave(filename = name_file, plot = p, device = "svg", width = 8, height = 5)
 
 df_anterior <- df_output
 
-pks <- c('anio', 'geocodigoFundar', 'geonombreFundar')
+pks <- c('anio', 'geocodigoFundar', 'metrica', 'fuente')
 
 comparacion <- argendataR::comparar_outputs(
   df = df_output,
@@ -272,7 +280,7 @@ df_output %>%
     analista = analista,
     pk = pks,
     descripcion_columnas = descripcion, 
-    unidades = list("women_political_empowerment" = "indice"))
+    unidades = list("valor" = "unidades"))
 
 
 

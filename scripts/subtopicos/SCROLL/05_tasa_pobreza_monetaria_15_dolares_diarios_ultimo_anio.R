@@ -7,6 +7,7 @@ subtopico <- "SCROLL"
 output_name <- "tasa_pobreza_monetaria_15_dolares_diarios_ultimo_anio.csv"
 analista <- "Daniel Schteingart"
 fuente1 <- 'R494C317' # World Bank - Poverty and Inequality Platform - Poverty Line: 15
+fuente2 <- 'R150C0' # CEDLAS - Indicadores Sociales de Argentina: Porcentaje de Personas Pobres. Total Nacional, 1992-2023
 
 df_pip <- argendataR::get_clean_path(fuente1) %>% 
   arrow::read_parquet(.) %>%
@@ -39,7 +40,7 @@ df_latam <- df_pip %>%
   summarise(tasa_pobreza_monetaria = stats::weighted.mean(headcount * 100, reporting_pop, na.rm = TRUE)) %>% 
   ungroup() %>% 
   left_join(geo_front, join_by(geocodigoFundar)) %>% 
-  mutate(poverty_line = 15)
+  mutate(poverty_line = 15.2) # se imputa manualmente la linea de pobreza nacional para Argentina, valuada en dólares PPP 2017
 
 paises_hic <- c(
   "ABW", "AND", "ARE", "ASM", "ATG", "AUS", "AUT", "BEL",
@@ -76,8 +77,29 @@ df_world <- df_pip %>%
   mutate(poverty_line = 15)
 
 
+df_cedlas <- argendataR::get_raw_path(fuente2) %>% 
+  readxl::read_excel(.) 
+  
+  
+df_cedlas_ultimo_dato <- df_cedlas %>% 
+  dplyr::filter(poverty_line == 'pobreza') %>%
+  group_by(year) %>%
+  dplyr::filter(date == max(date)) %>%
+  ungroup() %>%
+  dplyr::filter(
+    year == max(year)) %>% 
+  mutate(geocodigoFundar = 'ARG', geonombreFundar = 'Argentina') %>% 
+  select(anio = year, geocodigoFundar, geonombreFundar, tasa_pobreza_monetaria = poverty_rate) %>% 
+  mutate(poverty_line = 15.2)
 
-df_output <- bind_rows(df_paises, df_latam, df_hic, df_world)
+
+df_output <- bind_rows(
+  df_paises %>%
+     dplyr::filter(geocodigoFundar != 'ARG') %>% 
+     bind_rows(df_cedlas_ultimo_dato),
+  df_latam, 
+  df_hic, 
+  df_world)
 
 
 

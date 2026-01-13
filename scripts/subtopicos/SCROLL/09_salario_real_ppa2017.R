@@ -2,8 +2,9 @@
 rm( list=ls() )  #Borro todos los objetos
 gc()   #Garbage Collection
 
-subtopico <- "SALING"
-output_name <- "salario_real_ppa2017_ceped.csv"
+subtopico <- "SCROLL"
+output_name <- "salario_real_ppa2017.csv"
+analista <- "Daniel Schteingart"
 
 fuente1 <- "R209C0" # CEPED
 fuente2 <- 'R35C83' # CGI RTA 
@@ -96,32 +97,7 @@ df_output <- df_indec_cgi %>%
 
 
 
-
-# Crear el gráfico
-p <- ggplot(df_output, aes(x = anio, y = salario_medio_real_ppa_consumo_privado_2017_base1970)) + 
-    geom_line(color = "#003c6e") +
-    labs(
-        title = "Salario real en dólares 1935-2024 (año base 1970) \n(en PPA de consumo privado a precios de 2017)",
-        x = "",
-        y = "",
-        caption = "Fuente de datos: CEPED, INDEC"
-    ) +
-    theme_minimal() +
-    theme(
-        plot.background = element_rect(fill = "#f4f4f4", color = NA),
-        panel.background = element_rect(fill = "#f4f4f4", color = NA),
-        plot.title = element_text(color = "#003c6e", size = 12, face = "bold", hjust = 0),
-        plot.caption = element_text(color = "#003c6e", size = 8, hjust = 1),
-        axis.text.y = element_text(color = "#a4a4a4", size = 8),
-        axis.ticks.y = element_line(color = "#a4a4a4"),
-        panel.grid.major.x = element_blank(),
-        panel.grid.minor.x = element_blank(),
-        panel.grid.major.y = element_line(color = scales::alpha("#a4a4a4", 0.3), linewidth = 0.3),
-        panel.grid.minor.y = element_blank()
-    )
-
-
-anios_etiquetar <- c(1948, 1974, 1984, 2003, 2015, 2024)
+anios_etiquetar <- c(1935, 1974, 2024)
 
 df_labels <- df_output |>
   dplyr::filter(anio %in% anios_etiquetar)
@@ -131,6 +107,7 @@ p <- ggplot(
   aes(x = anio, y = salario_medio_real_ppa_consumo_privado_2017_base1970)
 ) +
   geom_line(color = "#003c6e", linewidth = 0.8) +
+  scale_x_continuous(breaks = seq(1935, 2024, 4)) +
 
   # Puntos en los años seleccionados
   geom_point(
@@ -165,8 +142,8 @@ p <- ggplot(
     plot.title = element_text(color = "#003c6e", size = 12, face = "bold", hjust = 0),
     plot.caption = element_text(color = "#003c6e", size = 8, hjust = 1),
 
-    # Quitar eje X
-    axis.text.x = element_blank(),
+    axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5),
+    axis.ticks = element_line(color = "white"),
     axis.ticks.x = element_blank(),
 
     axis.text.y = element_text(color = "#a4a4a4", size = 8),
@@ -188,3 +165,85 @@ graficos_path <- "./scripts/subtopicos/SCROLL/graficos"
 filename <- paste0(gsub("\\.csv", "", output_name), ".svg")
 name_file <- file.path(graficos_path, filename)
 ggsave(filename = name_file, plot = p, device = "svg", width = 8, height = 5)
+
+
+df_anterior <- df_output
+
+pks <- c('anio')
+
+comparacion <- argendataR::comparar_outputs(
+  df = df_output,
+  df_anterior = df_anterior,
+  nombre = output_name,
+  pk = pks
+)
+
+
+armador_descripcion <- function(metadatos, etiquetas_nuevas = data.frame(), output_cols){
+  # metadatos: data.frame sus columnas son variable_nombre y descripcion y 
+  # proviene de la info declarada por el analista 
+  # etiquetas_nuevas: data.frame, tiene que ser una dataframe con la columna 
+  # variable_nombre y la descripcion
+  # output_cols: vector, tiene las columnas del dataset que se quiere escribir
+  
+  etiquetas <- metadatos %>% 
+    dplyr::filter(variable_nombre %in% output_cols) 
+  
+  
+  etiquetas <- etiquetas %>% 
+    bind_rows(etiquetas_nuevas)
+  
+  
+  diff <- setdiff(output_cols, etiquetas$variable_nombre)
+  
+  stopifnot(`Error: algunas columnas de tu output no fueron descriptas` = length(diff) == 0)
+  
+  # En caso de que haya alguna variable que le haya cambiado la descripcion pero que
+  # ya existia se va a quedar con la descripcion nueva. 
+  
+  etiquetas <- etiquetas %>% 
+    group_by(variable_nombre) %>% 
+    filter(if(n() == 1) row_number() == 1 else row_number() == n()) %>%
+    ungroup()
+  
+  etiquetas <- stats::setNames(as.list(etiquetas$descripcion), etiquetas$variable_nombre)
+  
+  return(etiquetas)
+  
+}
+
+# Tomo las variables output_name y subtopico declaradas arriba
+metadatos <- argendataR::metadata(subtopico = subtopico) %>% 
+  dplyr::filter(grepl(paste0("^", output_name), nombre_archivo)) %>% 
+  distinct(variable_nombre, descripcion) 
+
+
+
+
+# Guardo en una variable las columnas del output que queremos escribir
+output_cols <- names(df_output) # lo puedo generar así si tengo df_output
+
+
+
+descripcion <- armador_descripcion(metadatos = metadatos,
+                                   # etiquetas_nuevas = etiquetas_nuevas,
+                                   output_cols = output_cols)
+
+
+
+df_output %>%
+  argendataR::write_output(
+    output_name = output_name,
+    subtopico = subtopico,
+    control = comparacion, 
+    fuentes = argendataR::colectar_fuentes(),
+    analista = analista,
+    pk = pks,
+    descripcion_columnas = descripcion, 
+    unidades = list("salario_medio_real_ppa_consumo_privado_2017_base1970" = "indice", "salario_medio_real_ppa_consumo_privado_2017_empalme" = "dólares PPP 2017"))
+
+
+
+output_name <- gsub("\\.csv", "", output_name)
+mandar_data(paste0(output_name, ".csv"), subtopico = subtopico, branch = "main")
+mandar_data(paste0(output_name, ".json"), subtopico = subtopico,  branch = "main")

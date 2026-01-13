@@ -4,7 +4,7 @@ gc()   #Garbage Collection
 
 # Metadatos 
 subtopico <- "SCROLL"
-output_name <- "indice_empoderamiento_politcio_mujeres_ultimo_anio.csv"
+output_name <- "indice_empoderamiento_politico_mujeres_ultimo_anio.csv"
 analista <- "Daniel Schteingart"
 fuente1 <- 'R495C0' # Varieties of Democracy (V-Dem) - Index of Liberal Democracy
 fuente2 <- 'R46C0' # World Bank - Population, total
