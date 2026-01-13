@@ -4,6 +4,7 @@ gc()   #Garbage Collection
 
 subtopico <- "SCROLL"
 output_name <- "ranking_pibpc_evol.csv"
+analista <- "Daniel Schteingart"
 fuente1 <- 'R292C161' # Prados de la Escosura - AHDI
 
 
@@ -142,7 +143,7 @@ df_output %>%
     analista = analista,
     pk = pks,
     descripcion_columnas = descripcion, 
-    unidades = list("women_political_empowerment" = "indice"))
+    unidades = list("pib_pc" = "dólares Geary-Khamis $1990", "ranking" = "unidades"))
 
 
 

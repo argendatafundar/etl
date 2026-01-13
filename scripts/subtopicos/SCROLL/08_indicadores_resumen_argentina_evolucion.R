@@ -2,8 +2,6 @@
 rm( list=ls() )  #Borro todos los objetos
 gc()   #Garbage Collection
 
-library(redatamx)
-
 # Metadatos 
 subtopico <- "SCROLL"
 output_name <- "indicadores_resumen_argentina_evolucion.csv"

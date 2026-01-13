@@ -4,6 +4,7 @@ gc()   #Garbage Collection
 
 subtopico <- "SCROLL"
 output_name <- "pib_per_capita_largo_plazo.csv"
+analista <- "Daniel Schteingart"
 fuente1 <- "R219C90" # Maddison - GDP per capita, PPP (constant 2011 international $)
 
 
@@ -21,10 +22,15 @@ df_output <- df_madd %>%
 p <- ggplot(df_output, aes(x = anio, y = pib_per_capita_ppp_2011)) + 
     geom_line(color = "#003c6e") +
     labs(
-        title = "PIB per cápita de Argentina (en dólares ajustados por paridad de poder adquisitivo 2011), 1820-2022",
+        title = "PIB per cápita de Argentina 1820-2022 \n (en dólares ajustados por paridad de poder adquisitivo 2011)",
         x = "",
         y = "",
-        caption = "Fuente de datos: CEPED, INDEC"
+        caption = "Fuente de datos: Maddison Project Database (2023)"
+    ) +
+    scale_y_continuous(
+        trans = "log2",
+        breaks = c(1000, 2000, 4000, 8000, 16000, 32000),
+        labels = function(x) format(x, big.mark = ".", decimal.mark = ",", scientific = FALSE)
     ) +
     theme_minimal() +
     theme(
@@ -45,3 +51,87 @@ graficos_path <- "./scripts/subtopicos/SCROLL/graficos"
 filename <- paste0(gsub("\\.csv", "", output_name), ".svg")
 name_file <- file.path(graficos_path, filename)
 ggsave(filename = name_file, plot = p, device = "svg", width = 8, height = 5)
+
+
+
+
+df_anterior <- df_output
+
+pks <- c('anio')
+
+comparacion <- argendataR::comparar_outputs(
+  df = df_output,
+  df_anterior = df_anterior,
+  nombre = output_name,
+  pk = pks
+)
+
+
+armador_descripcion <- function(metadatos, etiquetas_nuevas = data.frame(), output_cols){
+  # metadatos: data.frame sus columnas son variable_nombre y descripcion y 
+  # proviene de la info declarada por el analista 
+  # etiquetas_nuevas: data.frame, tiene que ser una dataframe con la columna 
+  # variable_nombre y la descripcion
+  # output_cols: vector, tiene las columnas del dataset que se quiere escribir
+  
+  etiquetas <- metadatos %>% 
+    dplyr::filter(variable_nombre %in% output_cols) 
+  
+  
+  etiquetas <- etiquetas %>% 
+    bind_rows(etiquetas_nuevas)
+  
+  
+  diff <- setdiff(output_cols, etiquetas$variable_nombre)
+  
+  stopifnot(`Error: algunas columnas de tu output no fueron descriptas` = length(diff) == 0)
+  
+  # En caso de que haya alguna variable que le haya cambiado la descripcion pero que
+  # ya existia se va a quedar con la descripcion nueva. 
+  
+  etiquetas <- etiquetas %>% 
+    group_by(variable_nombre) %>% 
+    filter(if(n() == 1) row_number() == 1 else row_number() == n()) %>%
+    ungroup()
+  
+  etiquetas <- stats::setNames(as.list(etiquetas$descripcion), etiquetas$variable_nombre)
+  
+  return(etiquetas)
+  
+}
+
+# Tomo las variables output_name y subtopico declaradas arriba
+metadatos <- argendataR::metadata(subtopico = subtopico) %>% 
+  dplyr::filter(grepl(paste0("^", output_name), nombre_archivo)) %>% 
+  distinct(variable_nombre, descripcion) 
+
+
+
+
+# Guardo en una variable las columnas del output que queremos escribir
+output_cols <- names(df_output) # lo puedo generar así si tengo df_output
+
+
+
+descripcion <- armador_descripcion(metadatos = metadatos,
+                                   # etiquetas_nuevas = etiquetas_nuevas,
+                                   output_cols = output_cols)
+
+
+
+df_output %>%
+  argendataR::write_output(
+    output_name = output_name,
+    subtopico = subtopico,
+    control = comparacion, 
+    fuentes = argendataR::colectar_fuentes(),
+    analista = analista,
+    pk = pks,
+    descripcion_columnas = descripcion, 
+    unidades = list("pib_per_capita_ppp_2011" = "dólares PPP 2011"))
+
+
+
+output_name <- gsub("\\.csv", "", output_name)
+mandar_data(paste0(output_name, ".csv"), subtopico = subtopico, branch = "main")
+mandar_data(paste0(output_name, ".json"), subtopico = subtopico,  branch = "main")

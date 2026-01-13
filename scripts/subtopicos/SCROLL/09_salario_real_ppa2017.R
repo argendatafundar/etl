@@ -4,7 +4,7 @@ gc()   #Garbage Collection
 
 subtopico <- "SCROLL"
 output_name <- "salario_real_ppa2017.csv"
-analista <- "Daniel Schteingart"
+analista <- "Daniel Schteingart" 
 
 fuente1 <- "R209C0" # CEPED
 fuente2 <- 'R35C83' # CGI RTA 
