@@ -24,20 +24,17 @@ ceped.df <- readxl::read_excel(argendataR::get_fuente_path(fuente1)) %>%
                 
 # Tomamos el dato Total general/Total
 df_rta <- arrow::read_parquet(argendataR::get_fuente_path(fuente2)) %>% 
-  dplyr::filter(trim == "Total") %>% 
-  dplyr::filter(indicador == "Total general") %>% 
+  dplyr::filter(indicador == "Total general", (trim == "Total" | (trim == "2º trimestre" & anio == 2025))) %>% 
   select(-trim,-indicador)
 
 # Tomamos el dato Total general/Total 
 df_puestos_ar <- arrow::read_parquet(argendataR::get_fuente_path(fuente3)) %>% 
-  dplyr::filter(trim == "Total") %>% 
-  dplyr::filter(indicador == "Total general") %>% 
+  dplyr::filter(indicador == "Total general", (trim == "Total" | (trim == "2º trimestre" & anio == 2025))) %>% 
   select(-trim,-indicador)
 
 # # Tomamos el dato Total general/Total
 df_puestos_anr <- arrow::read_parquet(argendataR::get_fuente_path(fuente4)) %>% 
-  dplyr::filter(trim == "Total") %>% 
-  dplyr::filter(indicador == "Total general") %>% 
+  dplyr::filter(indicador == "Total general", (trim == "Total" | (trim == "2º trimestre" & anio == 2025))) %>% 
   select(-trim,-indicador)
 
 
@@ -97,7 +94,7 @@ df_output <- df_indec_cgi %>%
 
 
 
-anios_etiquetar <- c(1935, 1974, 2024)
+anios_etiquetar <- c(1935, 1974, 2025)
 
 df_labels <- df_output |>
   dplyr::filter(anio %in% anios_etiquetar)
@@ -107,7 +104,7 @@ p <- ggplot(
   aes(x = anio, y = salario_medio_real_ppa_consumo_privado_2017_base1970)
 ) +
   geom_line(color = "#003c6e", linewidth = 0.8) +
-  scale_x_continuous(breaks = seq(1935, 2024, 4)) +
+  scale_x_continuous(breaks = seq(1935, 2025, 5)) +
 
   # Puntos en los años seleccionados
   geom_point(
@@ -156,7 +153,8 @@ p <- ggplot(
       linewidth = 0.3
     ),
     panel.grid.minor.y = element_blank()
-  )
+  ) + 
+  ylim(0, 150)
 
 
 

@@ -114,7 +114,8 @@ df_le_arg <- bind_rows(
     df_wpp_le_arg %>% 
       dplyr::filter(anio >= max(df_prados_le_arg$anio))
     ) %>% 
-  arrange(anio)
+  arrange(anio) %>% 
+  dplyr::filter(anio <= (year(Sys.Date())-1))
 
 #############################################
 # Años de escolarización promedio
@@ -173,10 +174,48 @@ df_output <- bind_rows(
   drop_na(valor)
 
 
+df_plot <- df_output %>% 
+  mutate(metrica = factor(
+    case_when(
+      metrica == "Esperanza de vida al nacer" ~ "Esperanza de vida al nacer",
+      metrica == "Tasa de alfabetización de adultos 15+ años" ~ "Tasa de alfabetismo (15 años y más)",
+      metrica == "Tasa de mortalidad infantil 0-5 años, en porcentaje" ~ "Mortalidad infantil (hasta 5 años), en %",
+      metrica == "Años de escolarización promedio de la población mayor a 15 años" ~ "Años de escolarización de la población (15 años y más)",
+      metrica == "Índice de democracia liberal" ~ "Índice de democracia liberal",
+      metrica == "Índice de empoderamiento político de las mujeres" ~ "Índice de empoderamiento político de las mujeres"
+    ),
+    levels = c(
+      "Esperanza de vida al nacer",
+      "Mortalidad infantil (hasta 5 años), en %",
+      "Años de escolarización de la población (15 años y más)",
+      "Tasa de alfabetismo (15 años y más)",
+      "Índice de democracia liberal",
+      "Índice de empoderamiento político de las mujeres"
+    )))
+
+
+
+# Definir límites del eje Y para cada faceta
+limites_y <- data.frame(
+  metrica = factor(
+    c(
+      "Esperanza de vida al nacer",
+      "Mortalidad infantil (hasta 5 años), en %",
+      "Años de escolarización de la población (15 años y más)",
+      "Tasa de alfabetismo (15 años y más)",
+      "Índice de democracia liberal",
+      "Índice de empoderamiento político de las mujeres"
+    ),
+    levels = levels(df_plot$metrica)
+  ),
+  ymin = c(0, 0, 0, 0, 0, 0),  # Valores inferiores (ajustar según necesidad)
+  ymax = c(80, 40, 12, 100, 1, 1)  # Valores superiores (ajustar según necesidad)
+)
+
 # Crear el gráfico
-p <- ggplot(df_output, aes(x = anio, y = valor)) + 
+p <- ggplot(df_plot, aes(x = anio, y = valor)) + 
     geom_line(color = "#003c6e") +
-    facet_wrap(~metrica, ncol = 3, scales = "free", labeller = label_wrap_gen(width = 45)) +
+    facet_wrap(~metrica, ncol = 3, scales = "free", labeller = label_wrap_gen(width = 30)) +
     labs(
         title = "Indicadores resumen de acceso a salud, educación, calidad democrática e igualdad de género",
         x = "",
@@ -191,11 +230,26 @@ p <- ggplot(df_output, aes(x = anio, y = valor)) +
         plot.caption = element_text(color = "#003c6e", size = 8, hjust = 1),
         axis.text.y = element_text(color = "#a4a4a4", size = 8),
         axis.ticks.y = element_line(color = "#a4a4a4"),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
         panel.grid.major.x = element_blank(),
         panel.grid.minor.x = element_blank(),
         panel.grid.major.y = element_line(color = scales::alpha("#a4a4a4", 0.3), linewidth = 0.3),
         panel.grid.minor.y = element_blank()
     )
+
+# Aplicar límites por faceta usando ggh4x::facetted_pos_scales
+if (requireNamespace("ggh4x", quietly = TRUE)) {
+  p <- p + ggh4x::facetted_pos_scales(
+    y = lapply(levels(df_plot$metrica), function(met) {
+      limites <- c(limites_y$ymin[limites_y$metrica == met], 
+                   limites_y$ymax[limites_y$metrica == met])
+      scale_y_continuous(limits = limites)
+    })
+  )
+} else {
+  warning("ggh4x no está disponible. Instala con: install.packages('ggh4x') para habilitar límites por faceta.")
+}
 
 # Exporta el gráfico como SVG en la carpeta 'graficos' 
 graficos_path <- "./scripts/subtopicos/SCROLL/graficos"
