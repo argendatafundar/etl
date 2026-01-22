@@ -11,7 +11,7 @@ fecha_actualizar <- "Sin informacion"
 
 source("./scripts/utils/pip_world_bank_api.R")
 
-POVERTY_LINE = 15
+POVERTY_LINE = 15.2
 povline_str = sub('\\.','_',POVERTY_LINE)
 ppp_version <- 2021
 
