@@ -41,9 +41,12 @@ df_puestos_anr <- arrow::read_parquet(argendataR::get_fuente_path(fuente4)) %>%
 df_ipc <- arrow::read_parquet(argendataR::get_fuente_path(fuente5)) %>% 
   dplyr::filter(region == "Nacional") %>% 
   dplyr::filter(descripcion == "Nivel general") %>% 
+  dplyr::filter(anio != 2025 | (anio == 2025 & mes %in% c(7,8,9))) %>% 
   group_by(anio) %>% 
   summarise(indice_ipc = mean(indice_ipc, na.rm = T)) %>% 
   ungroup()
+
+
 
 
 impute_forward <- function(A, B) {
@@ -91,6 +94,7 @@ df_output <- df_indec_cgi %>%
          salario_medio_real_ppa_consumo_privado_2017_empalme = ifelse(!is.na(salario_real_ppa_consumo_privado_2017), salario_real_ppa_consumo_privado_2017, salario_medio_real_fwd) ,
          salario_medio_real_ppa_consumo_privado_2017_base1970 = 100 * salario_medio_real_ppa_consumo_privado_2017_empalme / valor_base) %>%
   select(anio, salario_medio_real_ppa_consumo_privado_2017_base1970, salario_medio_real_ppa_consumo_privado_2017_empalme)
+
 
 
 

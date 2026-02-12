@@ -40,7 +40,7 @@ df_latam <- df_pip %>%
   summarise(tasa_pobreza_monetaria = stats::weighted.mean(headcount * 100, reporting_pop, na.rm = TRUE)) %>% 
   ungroup() %>% 
   left_join(geo_front, join_by(geocodigoFundar)) %>% 
-  mutate(poverty_line = 15.2) # se imputa manualmente la linea de pobreza nacional para Argentina, valuada en dólares PPP 2017
+  mutate(poverty_line = 15) # se imputa manualmente la linea de pobreza nacional para Argentina, valuada en dólares PPP 2017
 
 paises_hic <- c(
   "ABW", "AND", "ARE", "ASM", "ATG", "AUS", "AUT", "BEL",
@@ -90,7 +90,7 @@ df_cedlas_ultimo_dato <- df_cedlas %>%
     year == max(year)) %>% 
   mutate(geocodigoFundar = 'ARG', geonombreFundar = 'Argentina') %>% 
   select(anio = year, geocodigoFundar, geonombreFundar, tasa_pobreza_monetaria = poverty_rate) %>% 
-  mutate(poverty_line = 15.2)
+  mutate(poverty_line = 15)
 
 
 df_output <- bind_rows(
@@ -99,7 +99,11 @@ df_output <- bind_rows(
      bind_rows(df_cedlas_ultimo_dato),
   df_latam, 
   df_hic, 
-  df_world)
+  df_world) %>% 
+  dplyr::filter(anio == max(anio), geocodigoFundar != "ARG") %>% 
+  bind_rows(
+    data.frame(anio = 2025, geocodigoFundar = "ARG", geonombreFundar = "Argentina", tasa_pobreza_monetaria = 31.6, poverty_line = 15)
+  )
 
 
 
